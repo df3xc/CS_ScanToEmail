@@ -1,7 +1,8 @@
 # csharp-scanner-wia
-This repository contains a really simple scanner application that implements WIA (Windows Image Acquisition).
+This repository contains a really simple scanner application that uses WIA (Windows Image Acquisition).
 
-This application can send the scanned document as Email
+This application can send the scanned document as Email. Just a few mouse click and no complex dialogs to conifgure scanner options.
+The application is dedicated to elderly people.
 
 nuget install Microsoft.Office.Interop.Outlook
 
