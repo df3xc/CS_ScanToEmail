@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -17,12 +18,15 @@ namespace ScannerDemo
 {
     public partial class Form1 : Form
     {
-        string document_image_path = "";
-        string output_path;
+        string document_image_file = "";
+        string output_path = "udef";
+        string user_name = "udef";
         string image_filename;
+        string zip_filename = "udef";
         int color_mode = 4;
         DateTime dt = new DateTime();
         string DestMailAddress = "carsten.lueck@outlook.com";
+        string FromMailAddress = "h.lehniger@t-online.de";
 
         public Form1()
         {
@@ -31,6 +35,10 @@ namespace ScannerDemo
             jonas.logger.writeline("APP", "*************");
             jonas.logger.writeline("APP", "Program start");
             jonas.logger.writeline("APP", "*************");
+
+            user_name = Environment.UserName;
+            output_path = @"c:\Users\"+user_name+@"\OneDrive\Documentos\Programme\";  // bei Hilde heisst es documentos
+            //output_path = @"c:\Users\" + user_name + @"\OneDrive\Dokumente\Programme\";
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -51,20 +59,30 @@ namespace ScannerDemo
             }
 
             // Set start output folder TMP
-            output_path = Path.GetTempPath();
+            //output_path = Path.GetTempPath();
             image_filename = "scan2wia";
             // Set JPEG as default
             //comboBox1.SelectedIndex = 1;
 
             // delete old scan files
-            DirectoryInfo dir = new DirectoryInfo(output_path);
-            dir.EnumerateFiles("scan2wia*.jpeg").ToList().ForEach(f => f.Delete());
+            //DirectoryInfo dir = new DirectoryInfo(output_path);
+            //dir.EnumerateFiles("scan2wia*.jpeg").ToList().ForEach(f => f.Delete());
 
         }
 
         public void log(string text)
         {
             jonas.logger.writeline("APP",text);
+        }
+
+        public static void CompressToZip(string sourceFile, string destinationFile)
+        {
+            using (FileStream sourceStream = File.OpenRead(sourceFile))
+            using (FileStream targetStream = File.Create(destinationFile))
+            using (GZipStream compressionStream = new GZipStream(targetStream, CompressionMode.Compress))
+            {
+                sourceStream.CopyTo(compressionStream);
+            }
         }
 
 
@@ -188,18 +206,28 @@ namespace ScannerDemo
             //pictureBox1.Image = null;
 
             // Save the image
-            document_image_path = Path.Combine(output_path, image_filename + imageExtension);
+            //document_image_file = Path.Combine(output_path, image_filename + imageExtension);
 
-            if (File.Exists(document_image_path))
+
+            //document_image_file = image_filename + imageExtension;
+
+            document_image_file = output_path + image_filename + imageExtension;
+            zip_filename = output_path + image_filename + ".zip";
+
+
+            if (File.Exists(document_image_file))
             {
-                File.Delete(document_image_path);
+                File.Delete(document_image_file);
             }
             
-            image.SaveFile(document_image_path);
+            image.SaveFile(document_image_file);
 
-            log("scan saved : " + document_image_path);
+            log("scan saved : " + document_image_file);
 
-            scanPreviewPicture.Image = new Bitmap(document_image_path);
+            scanPreviewPicture.Image = new Bitmap(document_image_file);
+
+            CompressToZip(document_image_file, zip_filename);
+
         }
 
         /// <summary>
@@ -212,10 +240,11 @@ namespace ScannerDemo
             InfoDialog info = new InfoDialog();
             InfoDialog infoMailSend = new InfoDialog();
 
-            if (String.IsNullOrEmpty(document_image_path))
+            if (String.IsNullOrEmpty(document_image_file))
             {
                 info.InfoText("Bitte Dokument scannen");
                 info.showInfoDialog(true);
+                info.BringToFront();
                 //MessageBox.Show("Bitte Dokument scannen", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -224,9 +253,10 @@ namespace ScannerDemo
 
             info.InfoText("Sende Email an " + DestMailAddress);
             info.Show();
+            info.BringToFront();    
             Application.DoEvents();
             //mail_send = mail.sentOutlookMail(DestMailAddress, "Scanned Document", "Angefügtes Dokument beachten", document_image_path);
-            mail_send = mail.SendEmailFromAccount("send from ScanHilde", "Bitte Anhang beachten", document_image_path, DestMailAddress, "df3xc@web.de");
+            mail_send = mail.SendEmailFromAccount("send from ScanHilde", "Bitte Anhang beachten", zip_filename, DestMailAddress, FromMailAddress);
 
             Thread.Sleep(3000);
             info.Close();
@@ -242,6 +272,7 @@ namespace ScannerDemo
             {
                 log("Mail konnte nicht gesendet werden");
                 MessageBox.Show("Mail konnte nicht gesendet werden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                
             }
 
         }
@@ -333,7 +364,7 @@ namespace ScannerDemo
             // test PASSED 08.03.2025
 
             sendmail_outlook mail = new sendmail_outlook();
-            mail.SendEmailFromAccount("sendEmailFromAccount", "this is just for test", document_image_path, DestMailAddress , "df3xc@web.de");
+            mail.SendEmailFromAccount("sendEmailFromAccount", "this is just for test", document_image_file, DestMailAddress , "df3xc@web.de");
 
         }
 
