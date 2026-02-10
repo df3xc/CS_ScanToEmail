@@ -8,7 +8,7 @@ using jonas;
 using Outlook = Microsoft.Office.Interop.Outlook;
 using Microsoft.Office.Interop.Outlook;
 
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     public class sendmail_outlook
     {
@@ -92,7 +92,7 @@ namespace ScannerDemo
             try
             {
 
-                from = readFromAddress("fromAddress.txt");
+                //from = readFromAddress("fromAddress.txt");
                 jonas.logger.writeline("EMAIL","from mail address is "+from);
 
                 Outlook.Application outlookApp = new Outlook.Application();

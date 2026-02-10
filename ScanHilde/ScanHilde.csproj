@@ -70,6 +70,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="gui_thread.cs" />
     <Compile Include="Info.cs">
       <SubType>Form</SubType>
     </Compile>

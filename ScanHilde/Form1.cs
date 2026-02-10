@@ -1,7 +1,11 @@
-﻿using System;
+﻿//using WebTest;
+using GuiThread;
+using jonas;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
@@ -10,23 +14,27 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-//using WebTest;
-using jonas;
 using WIA;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     public partial class Form1 : Form
     {
+        ImageFile image = new ImageFile();
         string document_image_file = "";
         string output_path = "udef";
         string user_name = "udef";
         string image_filename;
+        string imageExtension = "";
+
         string zip_filename = "udef";
         int color_mode = 4;
         DateTime dt = new DateTime();
         string DestMailAddress = "carsten.lueck@outlook.com";
         string FromMailAddress = "h.lehniger@t-online.de";
+
+        guiThreadClass GUI = new guiThreadClass();
 
         public Form1()
         {
@@ -36,9 +44,6 @@ namespace ScannerDemo
             jonas.logger.writeline("APP", "Program start");
             jonas.logger.writeline("APP", "*************");
 
-            user_name = Environment.UserName;
-            output_path = @"c:\Users\"+user_name+@"\OneDrive\Documentos\Programme\";  // bei Hilde heisst es documentos
-            //output_path = @"c:\Users\" + user_name + @"\OneDrive\Dokumente\Programme\";
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -47,6 +52,35 @@ namespace ScannerDemo
             btnListScanners.Visible = false;
             btnSendemail.Visible = true;
             btnSendemail.Visible = false;
+            this.Height = this.Height + 100;
+
+            user_name = Environment.UserName;
+
+            if (user_name.Contains("car"))
+            {
+                output_path = @"c:\Users\" + user_name + @"\OneDrive\Dokumente\Programme\";
+                FromMailAddress = "carsten.lueck@outlook.com";
+            }
+            else
+            {
+                output_path = @"c:\Users\" + user_name + @"\OneDrive\Documentos\Programme\"; // bei Hilde heisst es documentos
+                FromMailAddress = "h.lehniger@t-online.de";
+            }
+
+            if (Directory.Exists(output_path) == false)
+            {
+                InfoDialog info = new InfoDialog();
+                info.InfoText("Directory nicht gefunden \n" + output_path);
+                log("Directory nicht gefunden \n" + output_path);
+                info.showInfoDialog(true);
+
+                Directory.CreateDirectory(output_path);
+                info.InfoText("Directory neu erstellt \n" + output_path);
+                log("Directory neu erstellt \n" + output_path);
+                info.showInfoDialog(true);
+
+                info.Close();
+            }
 
             if (ListScanners() == false)
             {
@@ -55,14 +89,11 @@ namespace ScannerDemo
                 InfoDialog info = new InfoDialog();
                 info.InfoText("Es wurde kein Scanner gefunden. \n\nDrucker einschalten und mit Computer verbinden");
                 info.showInfoDialog(true);
+                log("Es wurde kein Scanner gefunden. \n\nDrucker einschalten und mit Computer verbinden");
                 info.Close();
             }
-
-            // Set start output folder TMP
-            //output_path = Path.GetTempPath();
+;
             image_filename = "scan2wia";
-            // Set JPEG as default
-            //comboBox1.SelectedIndex = 1;
 
             // delete old scan files
             //DirectoryInfo dir = new DirectoryInfo(output_path);
@@ -75,16 +106,55 @@ namespace ScannerDemo
             jonas.logger.writeline("APP",text);
         }
 
-        public static void CompressToZip(string sourceFile, string destinationFile)
+        public void notify(string text)
+        {
+            GUI.RichTextBoxWrite(logBox, text);
+            log(text);
+        }
+
+        /// <summary>
+        /// compress a file using System.IO.Compression;
+        /// </summary>
+        /// <param name="sourceFile"></param>
+        /// <param name="archiveFile"></param>
+        public void CompressToZip(string sourceFile, string archiveFile)
         {
             using (FileStream sourceStream = File.OpenRead(sourceFile))
-            using (FileStream targetStream = File.Create(destinationFile))
+            using (FileStream targetStream = File.Create(archiveFile))
             using (GZipStream compressionStream = new GZipStream(targetStream, CompressionMode.Compress))
             {
                 sourceStream.CopyTo(compressionStream);
             }
         }
 
+        /// <summary>
+        /// compress a file using 7Zip.exe
+        /// </summary>
+        /// <param name="sourceFile"></param>
+        /// <param name="archiveFile"></param>
+        /// <returns></returns>
+        public int Compress_7Zip(string sourceFile, string archiveFile)
+        {
+            String app = @"C:\Program Files\7-Zip\7z.exe";
+            int result = -1;
+
+            if (File.Exists(app))
+            {
+                 result = jonas.process_util.process_exec(app, "a " + archiveFile + " " + sourceFile);
+                 log("7Zip return code : " + result.ToString());
+                 //GUI.RichTextBoxWrite(logBox, result + "\n");
+            }
+            else
+            {
+                notify("warning : 7-ZIP not found. \n");
+                //InfoDialog info = new InfoDialog();
+                //info.InfoText("Das Program " + app + " wurde nicht gefunden");
+                //log("Das Program " + app + " wurde nicht gefunden");
+                //info.showInfoDialog(true);
+                //info.Close();
+            }
+            return result;
+        }
 
         /// <summary>
         /// list available scanner in a listbox
@@ -113,8 +183,8 @@ namespace ScannerDemo
 
                 // Add the Scanner device to the listbox (the entire DeviceInfos object)
                 // Important: we store an object of type scanner (which ToString method returns the name of the scanner)
-                Scanner der = new Scanner(deviceManager.DeviceInfos[i]);
-                listBoxScannerList.Items.Add(der);
+                Scanner derScanner = new Scanner(deviceManager.DeviceInfos[i]);
+                listBoxScannerList.Items.Add(derScanner);
                 // Property property = deviceManager.DeviceInfos[i].Properties[0];
 
                 string scanner_name = (string) deviceManager.DeviceInfos[i].Properties["Name"].get_Value();
@@ -126,6 +196,7 @@ namespace ScannerDemo
             { 
                 btnListScanners.Enabled = true;
                 timer1.Enabled = true;
+                result = false;
             }
             else
             {
@@ -143,11 +214,72 @@ namespace ScannerDemo
         private void AfterScan()
         {
             log("AfterScan");
-            sendScanAsEmail();
+
+            document_image_file = output_path + image_filename + imageExtension;
+            document_image_file = document_image_file.Replace(" ", "_");
+            zip_filename = output_path + image_filename + ".zip";
+            zip_filename = zip_filename.Replace(" ", "_");
+
+
+            if (File.Exists(document_image_file))
+            {
+                File.Delete(document_image_file);
+            }
+
+            image.SaveFile(document_image_file);
+
+            notify("scan saved : \n" + document_image_file + "\n"); 
+
+            scanPreviewPicture.Image = new Bitmap(document_image_file);
+
+            // TODO: check filesize of document image. Is compression needed ?
+            // T-Online : attachement size must be less than 10MByte
+            // if fromAdress contains t-online then compress the file
+
+            int result;
+            long filesize;
+            long zipFileSize;
+            float float_size;
+
+            filesize = new FileInfo(document_image_file).Length;
+            float_size = (filesize /1000000f);
+            notify("image file size : " + float_size.ToString("F2") + " MByte \n");
+
+            // TODO: compression needed if file size > 10MByte for t-online
+
+            if (float_size > 2) // megabyte
+            {
+                notify("image file will be compressed \n");
+                result = Compress_7Zip(document_image_file, zip_filename);
+
+                if (result < 0)
+                {
+                    CompressToZip(document_image_file, zip_filename);
+                }
+
+                if (File.Exists (zip_filename))
+                {
+                    zipFileSize = new FileInfo(zip_filename).Length;
+                    float_size = zipFileSize / 1000000f;
+                    notify("zip file size : " + float_size.ToString("F2") + " MByte \n");
+                }
+                else
+                {
+                    // TODO : error message and return
+                    MessageBox.Show("ZIP file nicht gefunden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    notify("Error : ZIP file nicht gefunden \n");
+                    return;
+                }
+                sendScanAsEmail(zip_filename);
+            }
+            else
+            {
+                sendScanAsEmail(document_image_file);
+            }
         }
 
         /// <summary>
-        /// start scanning and save scanned image. Display image as preview
+        /// start scanning
         /// </summary>
 
         public void StartScanning()
@@ -157,76 +289,22 @@ namespace ScannerDemo
             log("StartScanning");
             this.Invoke(new MethodInvoker(delegate ()
             {
-                //device = listBox1.SelectedItem as Scanner;
                 if (listBoxScannerList.Items.Count > 0) device = listBoxScannerList.Items[0] as Scanner;
             }));
 
             if (listBoxScannerList.Items.Count == 0)
             {
-                //MessageBox.Show("Bitte Scanner einschalten", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             device.setColorMode(color_mode);
-
-            ImageFile image = new ImageFile();
-            string imageExtension = "";
-
+            
             this.Invoke(new MethodInvoker(delegate ()
             {
-
                 image = device.ScanImage(WIA.FormatID.wiaFormatJPEG);
                 imageExtension = ".jpeg";
-
-                //switch (comboBox1.SelectedIndex)
-                //{
-                //    case 0:
-                //        image = device.ScanImage(WIA.FormatID.wiaFormatPNG);
-                //        imageExtension = ".png";
-                //        break;
-                //    case 1:
-                //        image = device.ScanImage(WIA.FormatID.wiaFormatJPEG);
-                //        imageExtension = ".jpeg";
-                //        break;
-                //    case 2:
-                //        image = device.ScanImage(WIA.FormatID.wiaFormatBMP);
-                //        imageExtension = ".bmp";
-                //        break;
-                //    case 3:
-                //        image = device.ScanImage(WIA.FormatID.wiaFormatGIF);
-                //        imageExtension = ".gif";
-                //        break;
-                //    case 4:
-                //        image = device.ScanImage(WIA.FormatID.wiaFormatTIFF);
-                //        imageExtension = ".tiff";
-                //        break;
-                //}
             }));
 
-            //pictureBox1.Image = null;
-
-            // Save the image
-            //document_image_file = Path.Combine(output_path, image_filename + imageExtension);
-
-
-            //document_image_file = image_filename + imageExtension;
-
-            document_image_file = output_path + image_filename + imageExtension;
-            zip_filename = output_path + image_filename + ".zip";
-
-
-            if (File.Exists(document_image_file))
-            {
-                File.Delete(document_image_file);
-            }
-            
-            image.SaveFile(document_image_file);
-
-            log("scan saved : " + document_image_file);
-
-            scanPreviewPicture.Image = new Bitmap(document_image_file);
-
-            CompressToZip(document_image_file, zip_filename);
 
         }
 
@@ -234,7 +312,7 @@ namespace ScannerDemo
         /// send the scanned image file as email
         /// </summary>
 
-        private void sendScanAsEmail()
+        private void sendScanAsEmail(string attachmentFileName)
         {
             Boolean mail_send = false;
             InfoDialog info = new InfoDialog();
@@ -244,42 +322,34 @@ namespace ScannerDemo
             {
                 info.InfoText("Bitte Dokument scannen");
                 info.showInfoDialog(true);
-                info.BringToFront();
-                //MessageBox.Show("Bitte Dokument scannen", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             sendmail_outlook mail = new sendmail_outlook();
 
-            info.InfoText("Sende Email an " + DestMailAddress);
-            info.Show();
-            info.BringToFront();    
-            Application.DoEvents();
-            //mail_send = mail.sentOutlookMail(DestMailAddress, "Scanned Document", "Angefügtes Dokument beachten", document_image_path);
-            mail_send = mail.SendEmailFromAccount("send from ScanHilde", "Bitte Anhang beachten", zip_filename, DestMailAddress, FromMailAddress);
+            System.Windows.Forms.Application.DoEvents();
+            mail_send = mail.SendEmailFromAccount("send from ScanHilde", "Bitte Anhang beachten", attachmentFileName, DestMailAddress, FromMailAddress);
 
             Thread.Sleep(3000);
-            info.Close();
 
             if (mail_send == true)
             {
-                log("mail has been sent to "+ DestMailAddress);
+                log("Email has been sent to "+ DestMailAddress);
                 infoMailSend.InfoText("Email wurde gesendet\n\nEine Kopie befindet sich in GESENDETE ELEMENTE in Outlook");
                 infoMailSend.showInfoDialog(true);
                 infoMailSend.Close();
             }
             else
             {
-                log("Mail konnte nicht gesendet werden");
+                log("EMail konnte nicht gesendet werden");
                 MessageBox.Show("Mail konnte nicht gesendet werden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                
             }
 
         }
 
         private void btnEmail_Click(object sender, EventArgs e)
         {
-            sendScanAsEmail();
+            sendScanAsEmail(image_filename);
         }
 
 
@@ -350,12 +420,17 @@ namespace ScannerDemo
         {
             if (ListScanners() == true)
             {
+                notify("Scanner wurde gefunden. Jetzt Dokument scannen.");
                 btnListScanners.Visible = false;
                 timer1.Enabled = false;
                 InfoDialog info = new InfoDialog();
-                info.InfoText ("Scanner wurde gefunden. Jetzt Dokument scannen.");
+                info.InfoText ("Scanner wurde gefunden. Jetzt Dokument scannen.\n");
                 info.showInfoDialog(true);
                 info.Close();
+            }
+            else
+            {
+                notify("Suche nach einem Scanner ...\n");
             }
         }
 

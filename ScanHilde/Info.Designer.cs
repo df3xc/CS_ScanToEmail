@@ -1,5 +1,5 @@
 ﻿
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     partial class InfoDialog
     {
@@ -40,7 +40,7 @@ namespace ScannerDemo
             this.info_text.Location = new System.Drawing.Point(59, 55);
             this.info_text.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.info_text.Name = "info_text";
-            this.info_text.Size = new System.Drawing.Size(86, 31);
+            this.info_text.Size = new System.Drawing.Size(97, 35);
             this.info_text.TabIndex = 0;
             this.info_text.Text = "label1";
             // 
@@ -63,9 +63,10 @@ namespace ScannerDemo
             this.ClientSize = new System.Drawing.Size(996, 287);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.info_text);
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "InfoDialog";
             this.Text = "Info";
+            this.Shown += new System.EventHandler(this.InfoDialog_Shown);
             this.ResumeLayout(false);
             this.PerformLayout();
 

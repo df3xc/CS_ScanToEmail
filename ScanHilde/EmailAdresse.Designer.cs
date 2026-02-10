@@ -1,5 +1,5 @@
 ﻿
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     partial class EmailAdresse
     {

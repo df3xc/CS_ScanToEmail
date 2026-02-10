@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     public partial class InfoDialog : Form
     {
@@ -35,6 +35,12 @@ namespace ScannerDemo
             if(btnOk.Visible)
             { this.Hide(); }
 
+        }
+
+        private void InfoDialog_Shown(object sender, EventArgs e)
+        {
+            this.TopMost = true;
+            this.BringToFront();
         }
     }
 }

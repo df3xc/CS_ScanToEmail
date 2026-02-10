@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ScannerDemo.Properties {
+namespace ScannerToEmail.Properties {
     using System;
     
     

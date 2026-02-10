@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using WIA;
 using System.Windows.Forms;
 
-namespace ScannerDemo
+namespace ScannerToEmail
 {
     class Scanner
     {
