@@ -1,4 +1,14 @@
-﻿//using WebTest;
+﻿//*******************************************************************
+// Carsten Lueck
+// 2025/26
+//
+// Scan a document and send the document as email attachment.
+// Email application is Outlook
+//
+// Source control https://github.com/df3xc/CS_ScanToEmail
+// clone : https://github.com/df3xc/CS_ScanToEmail.git
+//*******************************************************************
+
 using GuiThread;
 using jonas;
 using System;
