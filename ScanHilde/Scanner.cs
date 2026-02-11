@@ -21,8 +21,11 @@ namespace ScannerToEmail
         const string WIA_SCAN_BRIGHTNESS_PERCENTS = "6154";
         const string WIA_SCAN_CONTRAST_PERCENTS = "6155";
 
+        const string WIA_INTENT_IMAGE_TYPE_TEXT = "0x04";
+
         private readonly DeviceInfo _deviceInfo;
-        private int resolution = 300;
+        //private int resolution = 300;
+        private int resolution = 200;
         private int width_pixel = 4800;
         private int height_pixel = 6000;
         // private int color_mode = 1;  // CLU : colored scan
@@ -44,7 +47,7 @@ namespace ScannerToEmail
         /// </summary>
         /// <param name="imageFormat">Expects a WIA.FormatID constant</param>
         /// <returns></returns>
-        public ImageFile ScanImage(string imageFormat)
+        public ImageFile ScanImage(string imageFormat, int scanDPI)
         {
             // Connect to the device and instruct it to scan
             // Connect to the device
@@ -58,6 +61,13 @@ namespace ScannerToEmail
             try
             {
                 AdjustScannerSettings(item, resolution, 0, 0, width_pixel, height_pixel, 0, 0, color_mode);
+
+                SetWIAProperty(item.Properties, WIA_HORIZONTAL_SCAN_RESOLUTION_DPI, scanDPI); // Horizontal Resolution
+                SetWIAProperty(item.Properties, WIA_VERTICAL_SCAN_RESOLUTION_DPI, scanDPI); // Vertical Resolution
+
+                //Property intentProp = item.Properties.get_Item("Current Intent");
+                //intentProp.set_Value(4); // WIA_INTENT_IMAGE_TYPE_TEXT
+                //intentProp.set_Value(0x00010000); // WIA_INTENT_MINIMIZE_SIZE
 
                 object scanResult = dlg.ShowTransfer(item, imageFormat, true);
 

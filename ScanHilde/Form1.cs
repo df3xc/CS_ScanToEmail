@@ -14,19 +14,13 @@ using jonas;
 using SharpCompress;
 using SharpCompress.Archives.Zip;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Pipes;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
 using WIA;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -34,8 +28,10 @@ namespace ScannerToEmail
 {
     public partial class Form1 : Form
     {
-        ImageFile image = new ImageFile();
+        ImageFile imageFile = new ImageFile();
+        int scanDPI = 300;
         string document_image_file = "";
+        string small_image_file = "";
         string output_path = "udef";
         string user_name = "udef";
         string image_filename = "scan2wia";
@@ -48,6 +44,8 @@ namespace ScannerToEmail
         string FromMailAddress = "h.lehniger@t-online.de";
 
         guiThreadClass GUI = new guiThreadClass();
+
+        Device scanner_device = null;
 
         public Form1()
         {
@@ -187,9 +185,26 @@ namespace ScannerToEmail
             return result;
         }
 
+
+
+        static void resizeImage(string sourcePath, string targetPath, int width, int height)
+        {
+            // We use a series of nested using statments to encapsualte the opening
+            // the image file and creating a new bitmap
+            // and then writing the new resized image onto it
+            // and then finally saving it to the output folder.
+            using (System.Drawing.Image sourceImage = System.Drawing.Image.FromFile(sourcePath))
+            using (var resizedImage = new Bitmap(width, height))
+            using (Graphics graphics = Graphics.FromImage(resizedImage))
+            {
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.DrawImage(sourceImage, 0, 0, width, height);
+                resizedImage.Save(targetPath);
+            }
+        }
+
         /// <summary>
         /// list available scanner in a listbox
-        /// 
         /// </summary>
         /// <returns>true if scanner found</returns>
 
@@ -221,6 +236,8 @@ namespace ScannerToEmail
                 string scanner_name = (string) deviceManager.DeviceInfos[i].Properties["Name"].get_Value();
                 log("Found scanner : " + scanner_name);
 
+                scanner_device = deviceManager.DeviceInfos[i].Connect();
+
             }
 
             if(listBoxScannerList.Items.Count == 0)
@@ -239,11 +256,17 @@ namespace ScannerToEmail
         }
 
         /// <summary>
-        /// called by WIA api after scan completed.
+        /// called by WIA api after scan completed or canceled
         /// </summary>
 
         private void AfterScan()
         {
+
+            int result;
+            long filesize;
+            long zipFileSize;
+            float float_size;
+
             log("AfterScan");
 
             notify("Scan ist beendet \n");
@@ -253,65 +276,101 @@ namespace ScannerToEmail
             zip_filename = output_path + image_filename + ".zip";
             zip_filename = zip_filename.Replace(" ", "_");
 
-
-            if (File.Exists(document_image_file))
+            try
             {
-                File.Delete(document_image_file);
-            }
 
-            image.SaveFile(document_image_file);
-
-            notify("Dokument gespeichert in : \n" + document_image_file + "\n"); 
-
-            scanPicture.Image = new Bitmap(document_image_file);
-
-            // TODO: check filesize of document image. Is compression needed ?
-            // T-Online : attachement size must be less than 10MByte
-            // if fromAdress contains t-online then compress the file
-
-            int result;
-            long filesize;
-            long zipFileSize;
-            float float_size;
-
-            filesize = new FileInfo(document_image_file).Length;
-            float_size = (filesize /1000000f);
-            notify("Größe des Dokuments : " + float_size.ToString("F2") + " MByte \n");
-
-            // TODO: compression needed if file size > 10MByte for t-online
-
-            if (float_size > 2) // megabyte
-            {
-                notify("Dokument wird komprimiert \n");
-                
-                 result = SharpCompressToZip(image_filename + imageExtension, document_image_file, zip_filename);
-
-                if (result < 0)
+                if (File.Exists(document_image_file))
                 {
-                    notify("File compression failed");
-                    return;
+                    File.Delete(document_image_file);
                 }
 
-                if (File.Exists (zip_filename))
+                
+                imageFile.SaveFile(document_image_file);
+
+                notify("Dokument gespeichert in : \n" + document_image_file + "\n");
+
+                scanPicture.Image = new Bitmap(document_image_file);
+
+                // TODO: check filesize of document image. Is compression needed ?
+                // T-Online : attachement size must be less than 10MByte
+                // if fromAdress contains t-online then resize the image file
+
+
+
+                filesize = new FileInfo(document_image_file).Length;
+                float_size = (filesize / 1000000f);
+                notify("Größe des Dokuments : " + float_size.ToString("F2") + " MByte \n");
+
+
+                if (float_size > 9) // megabyte
                 {
-                    zipFileSize = new FileInfo(zip_filename).Length;
-                    float_size = zipFileSize / 1000000f;
-                    notify("Größe des komprimierten Dokuments : " + float_size.ToString("F2") + " MByte \n");
+                    int newWidth = 2500;
+                    int newHeigth = 3000;
+
+                    small_image_file = output_path + image_filename + " small" + imageExtension;
+                    small_image_file = small_image_file.Replace(" ", "_");
+
+                    do
+                    {
+                        resizeImage(document_image_file, small_image_file, newWidth, newHeigth);
+
+                        filesize = new FileInfo(small_image_file).Length;
+                        float_size = (filesize / 1000000f);
+                        notify("Größe des kleinen Dokuments : " + float_size.ToString("F2") + " MByte \n");
+
+                        newWidth = (int)(newWidth * 100) / 110; 
+                        newHeigth = (int)(newHeigth * 100) / 110;
+
+                    } while (float_size > 8);
+
+                    sendScanAsEmail(small_image_file);
                 }
                 else
                 {
-                    MessageBox.Show("ZIP file nicht gefunden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    notify("Error : ZIP file nicht gefunden \n");
-                    notify("Datei nicht gefunden : " + zip_filename + "\n");
-                    return;
+                    sendScanAsEmail(document_image_file);
                 }
-                sendScanAsEmail(zip_filename);
+
+                // TODO: compression needed if file size > 10MByte for t-online
+
+                //if (float_size > 3) // megabyte
+                //{
+                //    notify("Dokument wird komprimiert \n");
+
+                //    result = SharpCompressToZip(image_filename + imageExtension, document_image_file, zip_filename);
+
+                //    if (result < 0)
+                //    {
+                //        notify("File compression failed");
+                //        return;
+                //    }
+
+                //    if (File.Exists(zip_filename))
+                //    {
+                //        zipFileSize = new FileInfo(zip_filename).Length;
+                //        float_size = zipFileSize / 1000000f;
+                //        notify("Größe des komprimierten Dokuments : " + float_size.ToString("F2") + " MByte \n");
+                //    }
+                //    else
+                //    {
+                //        MessageBox.Show("ZIP file nicht gefunden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //        notify("Error : ZIP file nicht gefunden \n");
+                //        notify("Datei nicht gefunden : " + zip_filename + "\n");
+                //        return;
+                //    }
+                //    sendScanAsEmail(zip_filename);
+                //}
+                //else
+                //{
+                //    sendScanAsEmail(document_image_file);
+                //}
             }
-            else
+            catch(Exception ex)
             {
-                sendScanAsEmail(document_image_file);
+                notify("Warnung : scan wurde abgebrochen \n");
             }
         }
+
+     
 
         /// <summary>
         /// start scanning
@@ -322,6 +381,8 @@ namespace ScannerToEmail
             Scanner device = null;
 
             log("StartScanning");
+
+
             this.Invoke(new MethodInvoker(delegate ()
             {
                 if (listBoxScannerList.Items.Count > 0) device = listBoxScannerList.Items[0] as Scanner;
@@ -333,10 +394,14 @@ namespace ScannerToEmail
             }
 
             device.setColorMode(color_mode);
-            
+
+            // set DPI Scanner Resolution
+
+
+
             this.Invoke(new MethodInvoker(delegate ()
             {
-                image = device.ScanImage(WIA.FormatID.wiaFormatJPEG);
+                imageFile = device.ScanImage(WIA.FormatID.wiaFormatJPEG,scanDPI);
                 imageExtension = ".jpeg";
             }));
 

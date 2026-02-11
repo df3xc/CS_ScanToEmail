@@ -69,7 +69,7 @@
             // logBox
             // 
             this.logBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.logBox.Location = new System.Drawing.Point(72, 1057);
+            this.logBox.Location = new System.Drawing.Point(65, 1037);
             this.logBox.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.logBox.Name = "logBox";
             this.logBox.Size = new System.Drawing.Size(1437, 322);

@@ -90,5 +90,10 @@ namespace ScannerToEmail
             }
 
         }
+
+        private void cbErwin_CheckedChanged(object sender, EventArgs e)
+        {
+            MessageBox.Show("Die Email Adresse von Erwin Majer ist nicht bekannt \n Bitte von Hand in die Textbox eintragen");
+        }
     }
 }

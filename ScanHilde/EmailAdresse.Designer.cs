@@ -43,10 +43,11 @@ namespace ScannerToEmail
             // tbMailAddress
             // 
             this.tbMailAddress.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.tbMailAddress.Location = new System.Drawing.Point(66, 361);
+            this.tbMailAddress.Location = new System.Drawing.Point(56, 270);
             this.tbMailAddress.Margin = new System.Windows.Forms.Padding(2);
+            this.tbMailAddress.Multiline = true;
             this.tbMailAddress.Name = "tbMailAddress";
-            this.tbMailAddress.Size = new System.Drawing.Size(883, 48);
+            this.tbMailAddress.Size = new System.Drawing.Size(883, 131);
             this.tbMailAddress.TabIndex = 0;
             // 
             // label1
@@ -56,13 +57,13 @@ namespace ScannerToEmail
             this.label1.Location = new System.Drawing.Point(66, 24);
             this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(457, 35);
+            this.label1.Size = new System.Drawing.Size(852, 35);
             this.label1.TabIndex = 1;
-            this.label1.Text = "Empfänger der Email auswählen";
+            this.label1.Text = "Empfänger der Email auswählen (mehrfach Auswahl möglich)";
             // 
             // btnOk
             // 
-            this.btnOk.Location = new System.Drawing.Point(107, 494);
+            this.btnOk.Location = new System.Drawing.Point(186, 448);
             this.btnOk.Margin = new System.Windows.Forms.Padding(2);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new System.Drawing.Size(317, 49);
@@ -73,7 +74,7 @@ namespace ScannerToEmail
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(656, 494);
+            this.btnCancel.Location = new System.Drawing.Point(562, 448);
             this.btnCancel.Margin = new System.Windows.Forms.Padding(2);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(293, 49);
@@ -122,7 +123,7 @@ namespace ScannerToEmail
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.125F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(66, 284);
+            this.label2.Location = new System.Drawing.Point(60, 220);
             this.label2.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(476, 35);
@@ -139,6 +140,7 @@ namespace ScannerToEmail
             this.cbErwin.TabIndex = 8;
             this.cbErwin.Text = "Erwin";
             this.cbErwin.UseVisualStyleBackColor = true;
+            this.cbErwin.CheckedChanged += new System.EventHandler(this.cbErwin_CheckedChanged);
             // 
             // EmailAdresse
             // 
