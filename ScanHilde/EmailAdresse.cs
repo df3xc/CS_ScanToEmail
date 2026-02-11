@@ -12,6 +12,11 @@ namespace ScannerToEmail
     {
         DialogResult result = DialogResult.Cancel;
 
+        Boolean cbCarstenDone = false;
+        Boolean cbBirgitDone = false;
+        Boolean cbGabiDone = false;
+        Boolean cbErwinDone = false;
+
         public EmailAdresse()
         {
             InitializeComponent();
@@ -36,16 +41,17 @@ namespace ScannerToEmail
         }
 
 
-        public string getAddress()
+        public string getDestAddress()
         {
             return (tbMailAddress.Text);
         }
 
-        public void setAddress(string address)
+        public void setDestAddress(string address)
         {
             tbMailAddress.Text = address;
         }
 
+        //TODO: add Birgit and Gabi
         private void btnDefault_Click(object sender, EventArgs e)
         {
             tbMailAddress.Text = "carsten.lueck@outlook.com";
@@ -53,6 +59,35 @@ namespace ScannerToEmail
             Thread.Sleep(1000);
             result = DialogResult.OK;
             this.Close();
+
+        }
+
+        private void cbCarsten_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cbCarsten.Checked & cbCarstenDone == false) 
+            { 
+                tbMailAddress.Text = tbMailAddress.Text + "CarstenLueck@outlook.com;";
+                cbCarstenDone = true;
+            }
+        }
+
+        private void cbBirgit_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cbBirgit.Checked & cbBirgitDone == false)
+            {
+                tbMailAddress.Text = tbMailAddress.Text + "birgit.collmer@gmx.de;";
+                cbBirgitDone = true;
+            }
+
+        }
+
+        private void cbGabi_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cbGabi.Checked & cbGabiDone == false)
+            {
+                tbMailAddress.Text = tbMailAddress.Text + "g.lueck64@web.de;";
+                cbGabiDone = true;
+            }
 
         }
     }

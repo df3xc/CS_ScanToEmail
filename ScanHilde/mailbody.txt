@@ -1,0 +1,20 @@
+﻿
+Ich habe ein Dokument gescanned und Dir als Anlage zu dieser Email gesendet.
+
+Bitte Anlage / Attachment beachten.
+
+Es ist eine Bilddatei (.jpeg) oder ein ZIP File (.zip), das das Dokument enthält.
+
+Für das ZIP File gilt:
+
+Anlage als datei speichern
+ZIP-File im Windows Datei-Manager (Explorer) öffnen
+
+oder 
+
+Anlage als datei speichern
+ZIP-File im Datei-Manager selektieren
+rechter Mausklick
+dann "alle Extrahieren"
+
+Viele Grüße

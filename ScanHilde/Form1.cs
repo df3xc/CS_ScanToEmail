@@ -2,7 +2,7 @@
 // Carsten Lueck
 // 2025/26
 //
-// Scan a document and send the document as email attachment.
+// Scan a document and send the scanned document as email attachment.
 // Email application is Outlook
 //
 // Source control https://github.com/df3xc/CS_ScanToEmail
@@ -11,6 +11,8 @@
 
 using GuiThread;
 using jonas;
+using SharpCompress;
+using SharpCompress.Archives.Zip;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,6 +21,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -35,7 +38,7 @@ namespace ScannerToEmail
         string document_image_file = "";
         string output_path = "udef";
         string user_name = "udef";
-        string image_filename;
+        string image_filename = "scan2wia";
         string imageExtension = "";
 
         string zip_filename = "udef";
@@ -102,8 +105,6 @@ namespace ScannerToEmail
                 log("Es wurde kein Scanner gefunden. \n\nDrucker einschalten und mit Computer verbinden");
                 info.Close();
             }
-;
-            image_filename = "scan2wia";
 
             // delete old scan files
             //DirectoryInfo dir = new DirectoryInfo(output_path);
@@ -122,19 +123,39 @@ namespace ScannerToEmail
             log(text);
         }
 
+
         /// <summary>
-        /// compress a file using System.IO.Compression;
+        /// compress a file using SharpCompress
         /// </summary>
-        /// <param name="sourceFile"></param>
+        /// <param name="filename"></param>
+        /// <param name="sourceFilePath"></param>
         /// <param name="archiveFile"></param>
-        public void CompressToZip(string sourceFile, string archiveFile)
+        /// <returns></returns>
+        public int SharpCompressToZip(string filename,string sourceFilePath, string archiveFile)
         {
-            using (FileStream sourceStream = File.OpenRead(sourceFile))
-            using (FileStream targetStream = File.Create(archiveFile))
-            using (GZipStream compressionStream = new GZipStream(targetStream, CompressionMode.Compress))
+            int result = 0;
+
+            try
             {
-                sourceStream.CopyTo(compressionStream);
+                FileStream fileStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read);
+                FileStream outputStream = new FileStream(archiveFile, FileMode.Create);
+
+                using (var archive = ZipArchive.Create())
+                {
+                    archive.AddEntry(filename, fileStream);
+                    archive.SaveTo(outputStream);
+                }
+                fileStream.Close();
+                outputStream.Close();
             }
+            catch (Exception e)
+            {
+                notify("EXCEPTION:"+ e.Message);
+                result = -1;
+            }
+
+            return (result);
+
         }
 
         /// <summary>
@@ -225,6 +246,8 @@ namespace ScannerToEmail
         {
             log("AfterScan");
 
+            notify("Scan ist beendet \n");
+
             document_image_file = output_path + image_filename + imageExtension;
             document_image_file = document_image_file.Replace(" ", "_");
             zip_filename = output_path + image_filename + ".zip";
@@ -238,9 +261,9 @@ namespace ScannerToEmail
 
             image.SaveFile(document_image_file);
 
-            notify("scan saved : \n" + document_image_file + "\n"); 
+            notify("Dokument gespeichert in : \n" + document_image_file + "\n"); 
 
-            scanPreviewPicture.Image = new Bitmap(document_image_file);
+            scanPicture.Image = new Bitmap(document_image_file);
 
             // TODO: check filesize of document image. Is compression needed ?
             // T-Online : attachement size must be less than 10MByte
@@ -253,31 +276,33 @@ namespace ScannerToEmail
 
             filesize = new FileInfo(document_image_file).Length;
             float_size = (filesize /1000000f);
-            notify("image file size : " + float_size.ToString("F2") + " MByte \n");
+            notify("Größe des Dokuments : " + float_size.ToString("F2") + " MByte \n");
 
             // TODO: compression needed if file size > 10MByte for t-online
 
             if (float_size > 2) // megabyte
             {
-                notify("image file will be compressed \n");
-                result = Compress_7Zip(document_image_file, zip_filename);
+                notify("Dokument wird komprimiert \n");
+                
+                 result = SharpCompressToZip(image_filename + imageExtension, document_image_file, zip_filename);
 
                 if (result < 0)
                 {
-                    CompressToZip(document_image_file, zip_filename);
+                    notify("File compression failed");
+                    return;
                 }
 
                 if (File.Exists (zip_filename))
                 {
                     zipFileSize = new FileInfo(zip_filename).Length;
                     float_size = zipFileSize / 1000000f;
-                    notify("zip file size : " + float_size.ToString("F2") + " MByte \n");
+                    notify("Größe des komprimierten Dokuments : " + float_size.ToString("F2") + " MByte \n");
                 }
                 else
                 {
-                    // TODO : error message and return
                     MessageBox.Show("ZIP file nicht gefunden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     notify("Error : ZIP file nicht gefunden \n");
+                    notify("Datei nicht gefunden : " + zip_filename + "\n");
                     return;
                 }
                 sendScanAsEmail(zip_filename);
@@ -325,6 +350,7 @@ namespace ScannerToEmail
         private void sendScanAsEmail(string attachmentFileName)
         {
             Boolean mail_send = false;
+            string mailbody = "Bitte Anlage beachten";
             InfoDialog info = new InfoDialog();
             InfoDialog infoMailSend = new InfoDialog();
 
@@ -335,23 +361,42 @@ namespace ScannerToEmail
                 return;
             }
 
+            if (File.Exists("mailbody.txt"))
+            {
+                mailbody = File.ReadAllText("mailbody.txt");
+            }
+            else
+            {
+                notify("Datei <mailbody.txt> nicht gefunden");
+            }
+
+            if (user_name.Contains("car")) mailbody = mailbody + "\nCarsten";
+            else mailbody = mailbody + "\nHilde";
+
             sendmail_outlook mail = new sendmail_outlook();
 
             System.Windows.Forms.Application.DoEvents();
-            mail_send = mail.SendEmailFromAccount("send from ScanHilde", "Bitte Anhang beachten", attachmentFileName, DestMailAddress, FromMailAddress);
+            // INFO : es können mehrere addressen angegeben werden. Jeweils durch ein Semikolon getrennt
+            
+            if(cbToBirgit.Checked == true)
+            {
+                DestMailAddress = DestMailAddress + ";birgit.collmer@gmx.de";
+            }
+
+            mail_send = mail.SendEmailFromAccount("send from ScanHilde", mailbody, attachmentFileName, DestMailAddress, FromMailAddress);
 
             Thread.Sleep(3000);
 
             if (mail_send == true)
             {
-                log("Email has been sent to "+ DestMailAddress);
-                infoMailSend.InfoText("Email wurde gesendet\n\nEine Kopie befindet sich in GESENDETE ELEMENTE in Outlook");
+                notify("Email has been sent to "+ DestMailAddress);
+                infoMailSend.InfoText("Email wurde gesendet an " + DestMailAddress + "\n\nEine Kopie befindet sich in GESENDETE ELEMENTE in Outlook");
                 infoMailSend.showInfoDialog(true);
                 infoMailSend.Close();
             }
             else
             {
-                log("EMail konnte nicht gesendet werden");
+                notify("EMail konnte nicht gesendet werden");
                 MessageBox.Show("Mail konnte nicht gesendet werden", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -378,9 +423,15 @@ namespace ScannerToEmail
                 return;
             }
 
+            lbDokument.Visible = false;
+            lbDruckerEinschalten.Visible = false;   
+            scanPicture.Visible = true; 
+
             dt = DateTime.Now;
             string time = dt.ToString("yy-MM-dd HH-mm-ss");
             image_filename = "scan2wia " + time;
+
+            notify("Scan wird durchgeführt \n");
             Task.Factory.StartNew(StartScanning).ContinueWith(result => AfterScan());
         }
 
@@ -404,12 +455,12 @@ namespace ScannerToEmail
             EmailAdresse mailAdress = new EmailAdresse();
             DialogResult result = new DialogResult();
 
-            mailAdress.setAddress(DestMailAddress);
+            //mailAdress.setDestAddress(DestMailAddress);
             result = mailAdress.showDialogBox();
 
             if(result == DialogResult.OK)
             {
-                DestMailAddress = mailAdress.getAddress();
+                DestMailAddress = mailAdress.getDestAddress();
             }
         }
 
