@@ -35,9 +35,9 @@ namespace ScannerToEmail
         string output_path = "udef";
         string user_name = "udef";
         string image_filename = "scan2wia";
-        string imageExtension = "";
+        string imageExtension = ".jpeg";
 
-        string zip_filename = "udef";
+        //string zip_filename = "udef";
         int color_mode = 4;
         DateTime dt = new DateTime();
         string DestMailAddress = "carsten.lueck@outlook.com";
@@ -185,8 +185,6 @@ namespace ScannerToEmail
             return result;
         }
 
-
-
         static void resizeImage(string sourcePath, string targetPath, int width, int height)
         {
             // We use a series of nested using statments to encapsualte the opening
@@ -231,7 +229,6 @@ namespace ScannerToEmail
                 // Important: we store an object of type scanner (which ToString method returns the name of the scanner)
                 Scanner derScanner = new Scanner(deviceManager.DeviceInfos[i]);
                 listBoxScannerList.Items.Add(derScanner);
-                // Property property = deviceManager.DeviceInfos[i].Properties[0];
 
                 string scanner_name = (string) deviceManager.DeviceInfos[i].Properties["Name"].get_Value();
                 log("Found scanner : " + scanner_name);
@@ -262,19 +259,16 @@ namespace ScannerToEmail
         private void AfterScan()
         {
 
-            int result;
             long filesize;
-            long zipFileSize;
+            //long zipFileSize;
             float float_size;
-
-            log("AfterScan");
 
             notify("Scan ist beendet \n");
 
             document_image_file = output_path + image_filename + imageExtension;
             document_image_file = document_image_file.Replace(" ", "_");
-            zip_filename = output_path + image_filename + ".zip";
-            zip_filename = zip_filename.Replace(" ", "_");
+            //zip_filename = output_path + image_filename + ".zip";
+            //zip_filename = zip_filename.Replace(" ", "_");
 
             try
             {
@@ -304,8 +298,10 @@ namespace ScannerToEmail
 
                 if (float_size > 9) // megabyte
                 {
+                    // DIN A4 : Verhältnis der Seitenlängen ist 1.41428
+                    // DIN A4 ist 210x297 mm gross
                     int newWidth = 2500;
-                    int newHeigth = 3000;
+                    int newHeigth = 3500;
 
                     small_image_file = output_path + image_filename + " small" + imageExtension;
                     small_image_file = small_image_file.Replace(" ", "_");
@@ -369,8 +365,6 @@ namespace ScannerToEmail
                 notify("Warnung : scan wurde abgebrochen \n");
             }
         }
-
-     
 
         /// <summary>
         /// start scanning
@@ -471,7 +465,6 @@ namespace ScannerToEmail
         {
             sendScanAsEmail(image_filename);
         }
-
 
         private void btnScan_Click(object sender, EventArgs e)
         {

@@ -51,17 +51,7 @@ namespace ScannerToEmail
             tbMailAddress.Text = address;
         }
 
-        //TODO: add Birgit and Gabi
-        private void btnDefault_Click(object sender, EventArgs e)
-        {
-            tbMailAddress.Text = "carsten.lueck@outlook.com";
-            Application.DoEvents();
-            Thread.Sleep(1000);
-            result = DialogResult.OK;
-            this.Close();
-
-        }
-
+     
         private void cbCarsten_CheckedChanged(object sender, EventArgs e)
         {
             if (cbCarsten.Checked & cbCarstenDone == false) 
@@ -93,7 +83,12 @@ namespace ScannerToEmail
 
         private void cbErwin_CheckedChanged(object sender, EventArgs e)
         {
-            MessageBox.Show("Die Email Adresse von Erwin Majer ist nicht bekannt \n Bitte von Hand in die Textbox eintragen");
+            if (cbErwin.Checked & cbErwinDone == false)
+            {
+                tbMailAddress.Text = tbMailAddress.Text + "erwin-majer@t-online.de;";
+                cbErwinDone = true;
+            }
+
         }
     }
 }
